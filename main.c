@@ -34,6 +34,7 @@ static int dcaenc_main(int argc, char *argv[])
 	uint8_t output[16384];
 	wavfile * f;
 	FILE * outfile;
+	const char *error_msg;
 	unsigned int samples_total;
 	int bitrate;
 	int wrote;
@@ -63,9 +64,10 @@ static int dcaenc_main(int argc, char *argv[])
 	        return 1;
 	    }
 	}
-	f = wavfile_open(argv[1]);
+	f = wavfile_open(argv[1], &error_msg);
 	if (!f) {
-	    fprintf(stderr, "Could not open or parse %s\n", argv[1]);
+	    fprintf(stderr, "Could not open or parse \"%s\".\n", argv[1]);
+	    fprintf(stderr, "Error: %s!\n", error_msg);
 	    return 1;
 	}
 	bitrate = atoi(argv[3]) * 1000;
@@ -74,12 +76,12 @@ static int dcaenc_main(int argc, char *argv[])
 	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, f->channels == 6 ? DCAENC_FLAG_LFE : 0);
 	
 	if (!c) {
-	    fprintf(stderr, "Wrong bitrate or sample rate\n");
+	    fprintf(stderr, "Wrong bitrate or sample rate!\n");
 	    return 1;
 	}
 	outfile = strcmp(argv[2], "-") ? fopen_utf8(argv[2], "wb") : stdout;
-	if (!outfile) {
-	    fprintf(stderr, "Could not open %s\n", argv[2]);
+	if(!outfile) {
+	    fprintf(stderr, "Could not open \"%s\".\n", argv[2]);
 	    return 1;
 	}
 	

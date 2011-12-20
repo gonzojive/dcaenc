@@ -33,7 +33,7 @@ typedef struct {
 	unsigned int samples_left;
 } wavfile;
 
-wavfile * wavfile_open(const char * filename);
+wavfile * wavfile_open(const char * filename, const char ** error_msg);
 int wavfile_read_s32(wavfile * f, int32_t * samples);
 void wavfile_close(wavfile * f);
 

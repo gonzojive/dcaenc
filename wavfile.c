@@ -25,6 +25,23 @@
 #include "wavfile.h"
 #include "unicode_support.h"
 
+static const char *g_error_msg[13] =
+{
+	/* 0*/ "Success",
+	/* 1*/ "Failed to open file",
+	/* 2*/ "RIFF header not found",
+	/* 3*/ "WAVE chunk not found",
+	/* 4*/ "Format chunk not found",
+	/* 5*/ "Failed to read Format chunk",
+	/* 6*/ "Invalid or unsupported format tag",
+	/* 7*/ "Unsupported number of channels (only 1, 2, 4, 5 and 6)",
+	/* 8*/ "Unsupported bits per sample (only 16 and 32 for now)",
+	/* 9*/ "Inconsistent block alignment",
+	/*10*/ "Inconsistent average bitrate",
+	/*11*/ "Data chunk not found",
+	/*12*/ "Data chunk size is invalid"
+};
+
 static int find_chunk(FILE * file, const uint8_t chunk_id[4], uint32_t *chunk_size)
 {
 	*chunk_size = 0;
@@ -60,7 +77,7 @@ static int find_chunk(FILE * file, const uint8_t chunk_id[4], uint32_t *chunk_si
 	}
 }
 
-wavfile * wavfile_open(const char * filename)
+wavfile * wavfile_open(const char * filename, const char ** error_msg)
 {
 	wavfile *result;
 	size_t s;
@@ -80,44 +97,77 @@ wavfile * wavfile_open(const char * filename)
     
 	result->file = strcmp(filename, "-") ? fopen_utf8(filename, "rb") : stdin;
 	if (!result->file)
+	{
+		*error_msg = g_error_msg[1];
 		goto err1;
+	}
 
 	s = fread(buffer, 1, 8, result->file);
 	if (s < 8)
+	{
+		*error_msg = g_error_msg[2];
 		goto err2;
+	}
 
 	if (memcmp(buffer, riff, 4))
+	{
+		*error_msg = g_error_msg[2];
 		goto err2;
+	}
 
 	/* TODO: check size (in buffer[4..8]) */
 	s = fread(buffer, 1, 4, result->file);
 	if (s < 4)
+	{
+		*error_msg = g_error_msg[3];
 		goto err2;
+	}
 
 	if (memcmp(buffer, wave, 4))
+	{
+		*error_msg = g_error_msg[3];
 		goto err2;
+	}
 
 	if(!find_chunk(result->file, fmt_, &s))
+	{
+		*error_msg = g_error_msg[4];
 		goto err2;
+	}
 	if(s != 16 && s != 40)
+	{
+		*error_msg = g_error_msg[4];
 		goto err2;
+	}
 
 	fmt = (uint8_t*)malloc(s);
 	if (!fmt)
+	{
+		*error_msg = g_error_msg[5];
 		goto err2;
+	}
 
 	if (fread(fmt, 1, s, result->file) != s)
+	{
+		*error_msg = g_error_msg[5];
 		goto err3;
+	}
 
     /* wFormatTag */
 	v = (uint32_t)fmt[0] | ((uint32_t)fmt[1] << 8);
 	if (v != 1 && v != 0xfffe)
+	{
+		*error_msg = g_error_msg[6];
 		goto err3;
+	}
 
 	/* wChannels */
 	v = (uint32_t)fmt[2] | ((uint32_t)fmt[3] << 8);
 	if (v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
+	{
+		*error_msg = g_error_msg[7];
 		goto err3;
+	}
 	result->channels = v;
 
 	/* dwSamplesPerSec */
@@ -134,21 +184,37 @@ wavfile * wavfile_open(const char * filename)
 	/* wBitsPerSample */
 	result->bits_per_sample = (uint32_t)fmt[14] | ((uint32_t)fmt[15] << 8);
 	if (result->bits_per_sample != 16 && result->bits_per_sample != 32)
+	{
+		*error_msg = g_error_msg[8];
 		goto err3;
+	}
 
 	if (block_align != result->channels * (result->bits_per_sample / 8))
+	{
+		*error_msg = g_error_msg[9];
 		goto err3;
+	}
 
 	if (avg_bps != block_align * result->sample_rate)
+	{
+		*error_msg = g_error_msg[10];
 		goto err3;
+	}
 
 	if(!find_chunk(result->file, data, &v))
+	{
+		*error_msg = g_error_msg[11];
 		goto err3;
+	}
 	if(((v == 0) || (v % block_align != 0)) && (result->file != stdin))
+	{
+		*error_msg = g_error_msg[12];
 		goto err3;
+	}
 
 	result->samples_left = ((v > 0) && (v < UNKNOWN_SIZE)) ? (v / block_align) : UNKNOWN_SIZE;
 	free(fmt);
+	*error_msg = g_error_msg[0];
 	return result;
 
 	err3:
