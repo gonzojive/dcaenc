@@ -25,6 +25,7 @@
 #include "wavfile.h"
 
 extern const int32_t prototype_filter[512];
+static char status[4] = {'|','/','-','\\'};
 
 static int dcaenc_main(int argc, char *argv[])
 {
@@ -33,10 +34,11 @@ static int dcaenc_main(int argc, char *argv[])
 	uint8_t output[16384];
 	wavfile * f;
 	FILE * outfile;
+	unsigned int samples_total;
 	int bitrate;
 	int wrote;
-	int samples_total;
 	int counter;
+	int status_idx;
 	
 	fprintf(stderr, "%s-%s [%s]\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
 	fprintf(stderr, "Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
@@ -89,14 +91,25 @@ static int dcaenc_main(int argc, char *argv[])
 	fflush(stderr);
 	
 	counter = 0;
+	status_idx = 0;
 	
-	while (wavfile_read_s32(f, data)) {
+	while(wavfile_read_s32(f, data))
+	{
 		wrote = dcaenc_convert_s32(c, data, output);
 		fwrite(output, 1, wrote, outfile);
 		if(counter == 0)
 		{
-			fprintf(stderr, "Encoding... [%3.1f%%]\r", ((double)(samples_total - f->samples_left)) / ((double)(samples_total)) * 100.0);
-			fflush(stderr);
+			if((samples_total > 0) && (samples_total < UNKNOWN_SIZE))
+			{
+				fprintf(stderr, "Encoding... [%3.1f%%]\r", ((double)(samples_total - f->samples_left)) / ((double)(samples_total)) * 100.0);
+				fflush(stderr);
+			}
+			else
+			{
+				fprintf(stderr, "Encoding... %c\r", status[status_idx]);
+				fflush(stderr);
+				status_idx = (status_idx+1) % 4;
+			}
 		}
 		counter = (counter+1) % 128;
 	}

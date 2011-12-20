@@ -25,134 +25,157 @@
 #include "wavfile.h"
 #include "unicode_support.h"
 
-static uint32_t find_chunk(FILE * file, const uint8_t chunk_id[4])
+static int find_chunk(FILE * file, const uint8_t chunk_id[4], uint32_t *chunk_size)
 {
-    uint8_t buffer[8];
-    while (1) {
-	size_t chunksize;
-        size_t s = fread(buffer, 1, 8, file);
-	if (s < 8)
-	    return 0;
-	chunksize = (uint32_t)buffer[4] | ((uint32_t)buffer[5] << 8) |
-	    ((uint32_t)buffer[6] << 16) | ((uint32_t)buffer[7] << 24);
-	if (!memcmp(buffer, chunk_id, 4))
-	    return chunksize;
-	fseek(file, chunksize, SEEK_CUR);
-    }
+	*chunk_size = 0;
+	uint8_t buffer[8];
+	
+	while (1) {
+		size_t chunksize;
+		size_t s = fread(buffer, 1, 8, file);
+		if (s < 8)
+			return 0;
+		chunksize = (uint32_t)buffer[4] | ((uint32_t)buffer[5] << 8) |
+			((uint32_t)buffer[6] << 16) | ((uint32_t)buffer[7] << 24);
+		
+		if(!memcmp(buffer, chunk_id, 4))
+		{
+			*chunk_size = chunksize;
+			return 1;
+		}
+		
+		if(fseek(file, chunksize, SEEK_CUR))
+		{
+			while(chunksize > 8)
+			{
+				s = fread(buffer, 1, 8, file);
+				if (s < 8)
+					return 0;
+				chunksize -= 8;
+			}
+			s = fread(buffer, 1, chunksize, file);
+			if (s < chunksize)
+				return 0;
+		}
+	}
 }
 
 wavfile * wavfile_open(const char * filename)
 {
-    wavfile *result;
-    size_t s;
-    uint8_t buffer[8];
-    uint8_t *fmt;
-    uint32_t v;
-    uint32_t avg_bps;
-    uint32_t block_align;
-    static const uint8_t riff[4] = {'R', 'I', 'F', 'F'};
-    static const uint8_t wave[4] = { 'W', 'A', 'V', 'E'};
-    static const uint8_t fmt_[4] = {'f', 'm', 't', ' '};
-    static const uint8_t data[4] = {'d', 'a', 't', 'a'};
+	wavfile *result;
+	size_t s;
+	uint8_t buffer[8];
+	uint8_t *fmt;
+	uint32_t v;
+	uint32_t avg_bps;
+	uint32_t block_align;
+	static const uint8_t riff[4] = {'R', 'I', 'F', 'F'};
+	static const uint8_t wave[4] = { 'W', 'A', 'V', 'E'};
+	static const uint8_t fmt_[4] = {'f', 'm', 't', ' '};
+	static const uint8_t data[4] = {'d', 'a', 't', 'a'};
+
+	result = (wavfile *)calloc(1, sizeof(wavfile));
+	if (!result)
+		goto err0;
     
-    result = (wavfile *)calloc(1, sizeof(wavfile));
-    if (!result)
-	goto err0;
-    
-    result->file = strcmp(filename, "-") ? fopen_utf8(filename, "rb") : stdin;
-    if (!result->file)
-	goto err1;
+	result->file = strcmp(filename, "-") ? fopen_utf8(filename, "rb") : stdin;
+	if (!result->file)
+		goto err1;
 
-    s = fread(buffer, 1, 8, result->file);
-    if (s < 8)
-	goto err2;
+	s = fread(buffer, 1, 8, result->file);
+	if (s < 8)
+		goto err2;
 
-    if (memcmp(buffer, riff, 4))
-	goto err2;
+	if (memcmp(buffer, riff, 4))
+		goto err2;
 
-    /* TODO: check size (in buffer[4..8]) */
-    s = fread(buffer, 1, 4, result->file);
-    if (s < 4)
-	goto err2;
+	/* TODO: check size (in buffer[4..8]) */
+	s = fread(buffer, 1, 4, result->file);
+	if (s < 4)
+		goto err2;
 
-    if (memcmp(buffer, wave, 4))
-	goto err2;
+	if (memcmp(buffer, wave, 4))
+		goto err2;
 
-    s = find_chunk(result->file, fmt_);
-    if (s != 16 && s != 40)
-	goto err2;
+	if(!find_chunk(result->file, fmt_, &s))
+		goto err2;
+	if(s != 16 && s != 40)
+		goto err2;
 
-    fmt = (uint8_t*)malloc(s);
-    if (!fmt)
-	goto err2;
+	fmt = (uint8_t*)malloc(s);
+	if (!fmt)
+		goto err2;
 
-    if (fread(fmt, 1, s, result->file) != s)
-	goto err3;
+	if (fread(fmt, 1, s, result->file) != s)
+		goto err3;
 
     /* wFormatTag */
-    v = (uint32_t)fmt[0] | ((uint32_t)fmt[1] << 8);
-    if (v != 1 && v != 0xfffe)
-	goto err3;
+	v = (uint32_t)fmt[0] | ((uint32_t)fmt[1] << 8);
+	if (v != 1 && v != 0xfffe)
+		goto err3;
 
-    /* wChannels */
-    v = (uint32_t)fmt[2] | ((uint32_t)fmt[3] << 8);
-    if (v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
-	goto err3;
-    result->channels = v;
-    /* dwSamplesPerSec */
-    result->sample_rate = (uint32_t)fmt[4] | ((uint32_t)fmt[5] << 8) |
-	((uint32_t)fmt[6] << 16) | ((uint32_t)fmt[7] << 24);
+	/* wChannels */
+	v = (uint32_t)fmt[2] | ((uint32_t)fmt[3] << 8);
+	if (v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
+		goto err3;
+	result->channels = v;
 
-    /* dwAvgBytesPerSec */
-    avg_bps = (uint32_t)fmt[8] | ((uint32_t)fmt[9] << 8) |
-	((uint32_t)fmt[10] << 16) | ((uint32_t)fmt[11] << 24);
+	/* dwSamplesPerSec */
+	result->sample_rate = (uint32_t)fmt[4] | ((uint32_t)fmt[5] << 8) |
+		((uint32_t)fmt[6] << 16) | ((uint32_t)fmt[7] << 24);
 
-    /* wBlockAlign */
-    block_align = (uint32_t)fmt[12] | ((uint32_t)fmt[13] << 8);
+	/* dwAvgBytesPerSec */
+	avg_bps = (uint32_t)fmt[8] | ((uint32_t)fmt[9] << 8) |
+		((uint32_t)fmt[10] << 16) | ((uint32_t)fmt[11] << 24);
 
-    /* wBitsPerSample */
-    result->bits_per_sample = (uint32_t)fmt[14] | ((uint32_t)fmt[15] << 8);
-    if (result->bits_per_sample != 16 && result->bits_per_sample != 32)
-	goto err3;
+	/* wBlockAlign */
+	block_align = (uint32_t)fmt[12] | ((uint32_t)fmt[13] << 8);
 
-    if (block_align != result->channels * (result->bits_per_sample / 8))
-	goto err3;
+	/* wBitsPerSample */
+	result->bits_per_sample = (uint32_t)fmt[14] | ((uint32_t)fmt[15] << 8);
+	if (result->bits_per_sample != 16 && result->bits_per_sample != 32)
+		goto err3;
 
-    if (avg_bps != block_align * result->sample_rate)
-	goto err3;
+	if (block_align != result->channels * (result->bits_per_sample / 8))
+		goto err3;
 
-    v = find_chunk(result->file, data);
-    if (v == 0 || v % block_align != 0)
-	goto err3;
+	if (avg_bps != block_align * result->sample_rate)
+		goto err3;
 
-    result->samples_left = v / block_align;
-    free(fmt);
-    return result;
+	if(!find_chunk(result->file, data, &v))
+		goto err3;
+	if(((v == 0) || (v % block_align != 0)) && (result->file != stdin))
+		goto err3;
 
-    err3:
+	result->samples_left = ((v > 0) && (v < UNKNOWN_SIZE)) ? (v / block_align) : UNKNOWN_SIZE;
 	free(fmt);
-    err2:
-	fclose(result->file);
-    err1:
+	return result;
+
+	err3:
+	free(fmt);
+	err2:
+	if(result->file != stdin) fclose(result->file);
+	err1:
 	free(result);
-    err0:
+	err0:
 	return NULL;
 }
 
 void wavfile_close(wavfile * f)
 {
-    if(f->file != stdin)
+	if(f->file != stdin)
 	{
 		fclose(f->file);
 	}
-    free(f);
+	free(f);
 }
 
 static int32_t get_s32_sample(const wavfile * f, const uint8_t *buffer, int sample, int channel)
 {
-    int offset = (f->bits_per_sample / 8) * (f->channels * sample + channel);
-    uint32_t v;
-    switch (f->bits_per_sample) {
+	int offset = (f->bits_per_sample / 8) * (f->channels * sample + channel);
+	uint32_t v;
+	switch (f->bits_per_sample)
+	{
 	case 16:
 	    v = (uint32_t)buffer[offset + 0] | ((uint32_t)buffer[offset + 1] << 8);
 	    return v << 16;
@@ -169,47 +192,59 @@ static int32_t get_s32_sample(const wavfile * f, const uint8_t *buffer, int samp
 
 int wavfile_read_s32(wavfile * f, int32_t *samples)
 {
-    uint8_t buffer[512 * 6 * 4];
-    int32_t smpte_sample[6];
-    int samples_to_read;
-    int bytes_to_read;
-    unsigned int i, ch;
-    
-    memset(buffer, 0, 512 * 6 * 4);
-    samples_to_read = f->samples_left < 512 ? f->samples_left : 512;
-    bytes_to_read = samples_to_read * f->channels * (f->bits_per_sample / 8);
-    f->samples_left -= samples_to_read;
-    if (fread(buffer, 1, bytes_to_read, f->file) != bytes_to_read) {
-	f->samples_left = 0;
-    }
-    
-    for (i = 0; i < 512; i++) {
-	for (ch = 0; ch < f->channels; ch++)
-	    smpte_sample[ch] = get_s32_sample(f, buffer, i, ch);
-	switch(f->channels) {
-	case 1:
-	case 2:
-	case 4:
-	    for (ch = 0; ch < f->channels; ch++)
-		    *(samples++) = smpte_sample[ch];
-	    break;
-	case 5:
-	    *(samples++) = smpte_sample[2];
-	    *(samples++) = smpte_sample[0];
-	    *(samples++) = smpte_sample[1];
-	    *(samples++) = smpte_sample[3];
-	    *(samples++) = smpte_sample[4];
-	    break;
-	case 6:
-	    *(samples++) = smpte_sample[2];
-	    *(samples++) = smpte_sample[0];
-	    *(samples++) = smpte_sample[1];
-	    *(samples++) = smpte_sample[4];
-	    *(samples++) = smpte_sample[5];
-	    *(samples++) = smpte_sample[3];
-	    break;
+	uint8_t buffer[512 * 6 * 4];
+	int32_t smpte_sample[6];
+	int samples_to_read;
+	int bytes_to_read;
+	int bytes_read;
+	unsigned int i, ch;
+	
+	if(f->samples_left < 1)
+	{
+		return 0;
 	}
-    }
+	
+	memset(buffer, 0, 512 * 6 * 4);
+	samples_to_read = (f->samples_left < 512) ? f->samples_left : 512;
+	bytes_to_read = samples_to_read * f->channels * (f->bits_per_sample / 8);
+	if(f->samples_left != UNKNOWN_SIZE) {
+		f->samples_left -= samples_to_read;
+	}
+	
+	bytes_read = fread(buffer, 1, bytes_to_read, f->file);
+	if(bytes_read != bytes_to_read) {
+		f->samples_left = 0;
+	}
     
-    return f->samples_left;
+    for (i = 0; i < 512; i++)
+	{
+		for (ch = 0; ch < f->channels; ch++)
+			smpte_sample[ch] = get_s32_sample(f, buffer, i, ch);
+		switch(f->channels)
+		{
+		case 1:
+		case 2:
+		case 4:
+			for (ch = 0; ch < f->channels; ch++)
+				*(samples++) = smpte_sample[ch];
+			break;
+		case 5:
+			*(samples++) = smpte_sample[2];
+			*(samples++) = smpte_sample[0];
+			*(samples++) = smpte_sample[1];
+			*(samples++) = smpte_sample[3];
+			*(samples++) = smpte_sample[4];
+			break;
+		case 6:
+			*(samples++) = smpte_sample[2];
+			*(samples++) = smpte_sample[0];
+			*(samples++) = smpte_sample[1];
+			*(samples++) = smpte_sample[4];
+			*(samples++) = smpte_sample[5];
+			*(samples++) = smpte_sample[3];
+			break;
+		}
+	}
+    
+	return bytes_read / (f->channels * (f->bits_per_sample / 8));
 }

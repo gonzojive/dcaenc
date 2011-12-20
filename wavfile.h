@@ -23,6 +23,8 @@
 
 #include <stdio.h>
 
+#define UNKNOWN_SIZE 0xFFFFFFFF
+
 typedef struct {
 	FILE * file;
 	unsigned int channels;
