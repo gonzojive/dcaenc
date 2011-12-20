@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "wavfile.h"
+#include "unicode_support.h"
 
 static uint32_t find_chunk(FILE * file, const uint8_t chunk_id[4])
 {
@@ -58,7 +59,7 @@ wavfile * wavfile_open(const char * filename)
     if (!result)
 	goto err0;
     
-    result->file = fopen(filename, "rb");
+    result->file = fopen_utf8(filename, "rb");
     if (!result->file)
 	goto err1;
 
