@@ -59,7 +59,7 @@ wavfile * wavfile_open(const char * filename)
     if (!result)
 	goto err0;
     
-    result->file = fopen_utf8(filename, "rb");
+    result->file = strcmp(filename, "-") ? fopen_utf8(filename, "rb") : stdin;
     if (!result->file)
 	goto err1;
 
@@ -141,7 +141,10 @@ wavfile * wavfile_open(const char * filename)
 
 void wavfile_close(wavfile * f)
 {
-    fclose(f->file);
+    if(f->file != stdin)
+	{
+		fclose(f->file);
+	}
     free(f);
 }
 

@@ -54,7 +54,10 @@ static int dcaenc_main(int argc, char *argv[])
 		fprintf(stderr, PACKAGE_URL "\n");
 		return 0;
 	    } else {
-	        fprintf(stderr, "Usage: dcaenc <input.wav> <output.dts> <kilo_bits_per_second>\n");
+			fprintf(stderr, "Usage:\n  dcaenc <input.wav> <output.dts> <bitrate_kbps>\n\n");
+	        fprintf(stderr, "Options:\n  - Input or output file name can be \"-\" for stdin/stdout.\n");
+			fprintf(stderr, "  - The bitrate is specified in kilobits per second and may be rounded up.\n");
+			fprintf(stderr, "  - The sample rate must be one of the following values:\n    32000, 44100, 48000 or those divided by 2 or 4.\n");
 	        return 1;
 	    }
 	}
@@ -72,7 +75,7 @@ static int dcaenc_main(int argc, char *argv[])
 	    fprintf(stderr, "Wrong bitrate or sample rate\n");
 	    return 1;
 	}
-	outfile = fopen_utf8(argv[2], "wb");
+	outfile = strcmp(argv[2], "-") ? fopen_utf8(argv[2], "wb") : stdout;
 	if (!outfile) {
 	    fprintf(stderr, "Could not open %s\n", argv[2]);
 	    return 1;
@@ -102,7 +105,10 @@ static int dcaenc_main(int argc, char *argv[])
 
 	wrote = dcaenc_destroy(c, output);
 	fwrite(output, 1, wrote, outfile);
-	fclose(outfile);
+	if(outfile != stdout)
+	{
+		fclose(outfile);
+	}
 	wavfile_close(f);
 
 	fprintf(stderr, "Done.\n");
@@ -110,30 +116,35 @@ static int dcaenc_main(int argc, char *argv[])
 }
 
 #ifdef _WIN32
+
 #include <Windows.h>
+#include <fcntl.h>
 
 int main( int argc, char **argv )
 {
-  int dcaenc_argc;
-  char **dcaenc_argv;
-  int exit_code;
+	int dcaenc_argc;
+	char **dcaenc_argv;
+	int exit_code;
 
-  UINT old_cp = GetConsoleOutputCP();
-  SetConsoleOutputCP(CP_UTF8);
+	_setmode(_fileno(stdin),  _O_BINARY);
+	_setmode(_fileno(stdout), _O_BINARY);
 
-  init_commandline_arguments_utf8(&dcaenc_argc, &dcaenc_argv);
-  exit_code = dcaenc_main(dcaenc_argc, dcaenc_argv);
-  free_commandline_arguments_utf8(&dcaenc_argc, &dcaenc_argv);
+	UINT old_cp = GetConsoleOutputCP();
+	SetConsoleOutputCP(CP_UTF8);
 
-  SetConsoleOutputCP(old_cp);
-  return exit_code;
+	init_commandline_arguments_utf8(&dcaenc_argc, &dcaenc_argv);
+	exit_code = dcaenc_main(dcaenc_argc, dcaenc_argv);
+	free_commandline_arguments_utf8(&dcaenc_argc, &dcaenc_argv);
+
+	SetConsoleOutputCP(old_cp);
+	return exit_code;
 }
 
 #else //_WIN32
 
 int main( int argc, char **argv )
 {
-    return dcaenc_main(argc, argv);
+	return dcaenc_main(argc, argv);
 }
 
 #endif //_WIN32
