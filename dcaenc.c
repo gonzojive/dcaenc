@@ -490,6 +490,7 @@ static void dcaenc_assign_bits(dcaenc_context c)
 {
 	/* Find the bounds where the binary search should work */
 	int low, high;
+	int loop_count;
 	init_quantization_noise(c, c->worst_quantization_noise);
 	low = high = c->worst_quantization_noise;
 	if (c->consumed_bits > c->frame_bits) {
@@ -499,7 +500,13 @@ static void dcaenc_assign_bits(dcaenc_context c)
 			init_quantization_noise(c, high);
 		}
 	} else {
+		loop_count = 0;
 		while (c->consumed_bits <= c->frame_bits) {
+			if(loop_count++ > 65536) {
+				fprintf(stderr, "\nFIXME: Livelock, dcaenc will abort!\n");
+				fprintf(stderr, "Try again with a lower bitrate.\n");
+				exit(1);
+			}
 			high = low;
 			low -= snr_fudge;
 			init_quantization_noise(c, low);

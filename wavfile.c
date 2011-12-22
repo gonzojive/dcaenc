@@ -134,7 +134,7 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg)
 		*error_msg = g_error_msg[4];
 		goto err2;
 	}
-	if(s != 16 && s != 40)
+	if((s < 16) || (s > 40))
 	{
 		*error_msg = g_error_msg[4];
 		goto err2;

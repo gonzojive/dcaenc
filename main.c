@@ -80,7 +80,7 @@ static int dcaenc_main(int argc, char *argv[])
 	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, f->channels == 6 ? DCAENC_FLAG_LFE : 0);
 	
 	if (!c) {
-	    fprintf(stderr, "Wrong bitrate or sample rate!\n");
+	    fprintf(stderr, "Insufficient bitrate or unsupported sample rate!\n");
 	    return 1;
 	}
 	outfile = strcmp(argv[2], "-") ? fopen_utf8(argv[2], "wb") : stdout;
