@@ -36,6 +36,10 @@ static int dcaenc_main(int argc, char *argv[])
 	FILE * outfile;
 	const char *error_msg;
 	unsigned int samples_total;
+	unsigned int samples_read;
+	unsigned int samples_read_total;
+	unsigned int current_pos;
+	double percent_done;
 	int bitrate;
 	int wrote;
 	int counter;
@@ -93,29 +97,36 @@ static int dcaenc_main(int argc, char *argv[])
 	fflush(stderr);
 	
 	counter = 0;
+	samples_read_total = 0;
 	status_idx = 0;
 	
-	while(wavfile_read_s32(f, data))
+	while(samples_read = wavfile_read_s32(f, data))
 	{
+		samples_read_total += samples_read;
 		wrote = dcaenc_convert_s32(c, data, output);
 		fwrite(output, 1, wrote, outfile);
+		
 		if(counter == 0)
 		{
+			current_pos = samples_read_total / f->sample_rate;
+			
 			if((samples_total > 0) && (samples_total < UNKNOWN_SIZE))
 			{
-				fprintf(stderr, "Encoding... [%3.1f%%]\r", ((double)(samples_total - f->samples_left)) / ((double)(samples_total)) * 100.0);
+				percent_done = ((double)(samples_total - f->samples_left)) / ((double)(samples_total));
+				fprintf(stderr, "Encoding... %d:%02d [%3.1f%%]\r", current_pos / 60, current_pos % 60, percent_done * 100.0);
 				fflush(stderr);
 			}
 			else
 			{
-				fprintf(stderr, "Encoding... %c\r", status[status_idx]);
+				fprintf(stderr, "Encoding... %d:%02d [%c]\r", current_pos / 60, current_pos % 60, status[(status_idx = (status_idx+1) % 4)]);
 				fflush(stderr);
-				status_idx = (status_idx+1) % 4;
 			}
 		}
-		counter = (counter+1) % 128;
+		
+		counter = (counter+1) % 125;
 	}
-	fprintf(stderr, "Encoding... [%3.1f%%]\n", 100.0);
+	
+	fprintf(stderr, "Encoding... %d:%02d [%3.1f%%]\n", (samples_read_total / f->sample_rate) / 60, (samples_read_total / f->sample_rate) % 60, 100.0);
 	fflush(stderr);
 
 	wrote = dcaenc_destroy(c, output);
