@@ -30,10 +30,16 @@
 #define div_round_up(a, b) (((a) + (b) - 1) / (b))
 #define round_up(a, b) ((((a) + (b) - 1) / (b)) * (b))
 
+#ifdef _MSC_VER
+#define INLINE __forceinline
+#else
+#define INLINE inline
+#endif
+
 dcaenc_context dcaenc_create(int sample_rate, int channel_config,
-                             int approx_bitrate, int flags)
+							 int approx_bitrate, int flags)
 {
-	int i, frame_bits, bit_step, fir, useful_bitrate;
+	int i, frame_bits, bit_step, fir, useful_bitrate, min_frame_bits;
 	dcaenc_context result;
 
 	i = 0;
@@ -60,7 +66,7 @@ dcaenc_context dcaenc_create(int sample_rate, int channel_config,
 	/* Round frame_bits up to the next permitted value */
 	frame_bits = round_up(frame_bits, bit_step);
 	
-	int min_frame_bits = 132 + (493 + 28 * 32) * channels_table[channel_config];
+	min_frame_bits = 132 + (493 + 28 * 32) * channels_table[channel_config];
 	if (flags & DCAENC_FLAG_LFE)
 		min_frame_bits += 72;
 
@@ -108,19 +114,19 @@ int dcaenc_output_size(dcaenc_context c)
 	return c->frame_bits / ((c->flags & DCAENC_FLAG_28BIT) ? 7 : 8);
 }
 
-static inline const int32_t *pcm_sample(dcaenc_context c,
-                                        const int32_t *container,
-                                        int sample, int channel)
+INLINE static const int32_t *pcm_sample(dcaenc_context c,
+										const int32_t *container,
+										int sample, int channel)
 {
 	return &container[sample * c->channels + channel];
 }
 
-static inline int32_t half32(int32_t a)
+INLINE static int32_t half32(int32_t a)
 {
 	return (a + 1) >> 1;
 }
 
-static inline int32_t mul32(int32_t a, int32_t b)
+INLINE static int32_t mul32(int32_t a, int32_t b)
 {
 	int64_t r = (int64_t)a * b + 0x80000000ULL;
 	return r >> 32;
@@ -148,7 +154,7 @@ static void dcaenc_subband_transform(dcaenc_context c, const int32_t *input)
 				accum[i] = 0;
 
 			for (k = 0, i = hist_start, j = 0;
-			     i < 512; k = (k + 1) & 63, i++, j++)
+				 i < 512; k = (k + 1) & 63, i++, j++)
 				accum[k] += mul32(hist[i], c->band_interpolation[j]);
 			for (i = 0; i < hist_start; k = (k + 1) & 63, i++, j++)
 				accum[k] += mul32(hist[i], c->band_interpolation[j]);
@@ -204,7 +210,7 @@ static void dcaenc_lfe_downsample(dcaenc_context c, const int32_t *input)
 		/* Copy in 64 new samples from input */
 		for (i = 0; i < 64; i++)
 			hist[i + hist_start] = *pcm_sample(c, input,
-			                                   lfes * 64 + i, c->channels - 1);
+											   lfes * 64 + i, c->channels - 1);
 
 		hist_start = (hist_start + 64) & 511;
 	}
@@ -313,7 +319,7 @@ static int32_t add_cb(int32_t a, int32_t b)
 
 /* accepts anything, out_cb[i] can only grow */
 static void adjust_jnd(int samplerate_index,
-                       const int32_t in[512], int32_t out_cb[256])
+					   const int32_t in[512], int32_t out_cb[256])
 {
 	int i, j;
 	int32_t power[256];
@@ -336,7 +342,7 @@ static void adjust_jnd(int samplerate_index,
 			denom = add_cb(denom, power[j] + auf[samplerate_index][i][j]);
 		for (j = 0; j < 256; j++)
 			out_cb_unnorm[j] = add_cb(out_cb_unnorm[j],
-			                          -denom + auf[samplerate_index][i][j]);
+									  -denom + auf[samplerate_index][i][j]);
 	}
 
 	for (j = 0; j < 256; j++)
@@ -345,11 +351,11 @@ static void adjust_jnd(int samplerate_index,
 
 
 typedef void (*walk_band_t)(dcaenc_context c, int band1, int band2, int f,
-                            int32_t spectrum1, int32_t spectrum2, int channel,
-                            int32_t * arg);
+							int32_t spectrum1, int32_t spectrum2, int channel,
+							int32_t * arg);
 
 static void walk_band_low(dcaenc_context c, int band, int channel,
-                          walk_band_t walk, int32_t * arg)
+						  walk_band_t walk, int32_t * arg)
 {
 	int f;
 	if (band == 0) {
@@ -358,12 +364,12 @@ static void walk_band_low(dcaenc_context c, int band, int channel,
 	} else {
 		for (f = 0; f < 8; f++)
 			walk(c, band, band - 1, 8 * band - 4 + f,
-			     c->band_spectrum[7 - f], c->band_spectrum[f], channel, arg);
+				 c->band_spectrum[7 - f], c->band_spectrum[f], channel, arg);
 	}
 }
 
 static void walk_band_high(dcaenc_context c, int band, int channel,
-                           walk_band_t walk, int32_t * arg)
+						   walk_band_t walk, int32_t * arg)
 {
 	int f;
 	if (band == 31) {
@@ -372,12 +378,12 @@ static void walk_band_high(dcaenc_context c, int band, int channel,
 	} else {
 		for (f = 0; f < 8; f++)
 			walk(c, band, band + 1, 8 * band + 4 + f,
-			     c->band_spectrum[f], c->band_spectrum[7 - f], channel, arg);
+				 c->band_spectrum[f], c->band_spectrum[7 - f], channel, arg);
 	}
 }
 
 static void walk_whole_spectrum(dcaenc_context c, int channel,
-                                walk_band_t walk, int32_t * arg)
+								walk_band_t walk, int32_t * arg)
 {
 	int band;
 	for (band = 0; band < 32; band++)
@@ -491,6 +497,7 @@ static void dcaenc_assign_bits(dcaenc_context c)
 	/* Find the bounds where the binary search should work */
 	int low, high;
 	int loop_count;
+	int down;
 	init_quantization_noise(c, c->worst_quantization_noise);
 	low = high = c->worst_quantization_noise;
 	if (c->consumed_bits > c->frame_bits) {
@@ -514,7 +521,6 @@ static void dcaenc_assign_bits(dcaenc_context c)
 	}
 
 	/* Now do a binary search between low and high to see what fits */
-	int down;
 	for (down = snr_fudge >> 1; down; down >>= 1) {
 		init_quantization_noise(c, high - down);
 		if (c->consumed_bits <= c->frame_bits)
@@ -545,8 +551,10 @@ static void bitstream_init(dcaenc_context c, uint8_t *output)
 
 static void bitstream_put(dcaenc_context c, uint32_t bits, int nbits)
 {
+	int max_bits;
 	assert(bits < (1 << nbits));
-	int max_bits = (c->flags & DCAENC_FLAG_28BIT) ? 28 : 32;
+	
+	max_bits = (c->flags & DCAENC_FLAG_28BIT) ? 28 : 32;
 	c->wrote += nbits;
 	bits &= ~(0xffffffff << nbits);
 	if (nbits + c->wbits >= max_bits) {
@@ -606,7 +614,7 @@ static int32_t dcaenc_quantize_value(int32_t value, softfloat quant)
 static int32_t dcaenc_quantize(dcaenc_context c, int sample, int band, int ch)
 {
 	int32_t result = dcaenc_quantize_value(c->subband_samples[sample][band][ch],
-					       c->quant[band][ch]);
+						   c->quant[band][ch]);
 
 	assert(result <= (quant_levels[c->abits[band][ch]] - 1) / 2);
 	assert(result >= -(quant_levels[c->abits[band][ch]] / 2));
@@ -615,11 +623,14 @@ static int32_t dcaenc_quantize(dcaenc_context c, int sample, int band, int ch)
 
 static int dcaenc_calc_one_scale(int32_t peak_cb, int abits, softfloat *quant)
 {
+	int our_nscale, try_remove;
+	int32_t peak;
+	softfloat our_quant;
+
 	assert(peak_cb <= 0);
 	assert(peak_cb >= -2047);
-	int32_t peak = cb_to_level[-peak_cb];
-	int our_nscale, try_remove;
-	softfloat our_quant;
+
+	peak = cb_to_level[-peak_cb];
 	our_nscale = 127;
 
 	for (try_remove = 64; try_remove > 0; try_remove >>= 1) {

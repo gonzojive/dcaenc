@@ -20,9 +20,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef _MSC_VER
+#include "config_msvc.h"
+#else
 #include "config.h"
+#endif
+
 #include "dcaenc.h"
 #include "wavfile.h"
+#include "unicode_support.h"
 
 extern const int32_t prototype_filter[512];
 static char status[4] = {'|','/','-','\\'};
@@ -45,16 +52,15 @@ static int dcaenc_main(int argc, char *argv[])
 	int counter;
 	int status_idx;
 	
-	fprintf(stderr, "%s-%s [%s]\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
-	fprintf(stderr, "Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
-
-	fprintf(stderr, "This program is free software: you can redistribute it and/or modify\n");
-	fprintf(stderr, "it under the terms of the GNU General Public License <http://www.gnu.org/>.\n");
-	fprintf(stderr, "Note that this program is distributed with ABSOLUTELY NO WARRANTY.\n\n");
-	
 	static const int channel_map[6] = {DCAENC_CHANNELS_MONO, DCAENC_CHANNELS_STEREO, 0,
 	DCAENC_CHANNELS_2FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR };
 	
+	fprintf(stderr, "%s-%s [%s]\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
+	fprintf(stderr, "Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
+	fprintf(stderr, "This program is free software: you can redistribute it and/or modify\n");
+	fprintf(stderr, "it under the terms of the GNU General Public License <http://www.gnu.org/>.\n");
+	fprintf(stderr, "Note that this program is distributed with ABSOLUTELY NO WARRANTY.\n\n");
+
 	if (argc != 4) {
 	    if (argc == 2 && !strcmp(argv[1], "--version")) {
 	        fprintf(stderr, PACKAGE_NAME "-" PACKAGE_VERSION "\n");
@@ -144,18 +150,20 @@ static int dcaenc_main(int argc, char *argv[])
 #ifdef _WIN32
 
 #include <Windows.h>
+#include <io.h>
 #include <fcntl.h>
 
 int main( int argc, char **argv )
 {
 	int dcaenc_argc;
 	char **dcaenc_argv;
+	UINT old_cp;
 	int exit_code;
 
 	_setmode(_fileno(stdin),  _O_BINARY);
 	_setmode(_fileno(stdout), _O_BINARY);
 
-	UINT old_cp = GetConsoleOutputCP();
+	old_cp = GetConsoleOutputCP();
 	SetConsoleOutputCP(CP_UTF8);
 
 	init_commandline_arguments_utf8(&dcaenc_argc, &dcaenc_argv);

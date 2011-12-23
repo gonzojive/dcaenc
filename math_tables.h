@@ -17,12 +17,18 @@ extern const int32_t cb_to_add[256];
 
 extern const int quant_levels_cb[27];
 
-static inline int32_t cos_t(int x)
+#ifdef _MSC_VER
+#define INLINE __forceinline
+#else
+#define INLINE inline
+#endif
+
+INLINE static int32_t cos_t(int x)
 {
 	return cos_table[x & 2047];
 }
 
-static inline int32_t sin_t(int x)
+INLINE static int32_t sin_t(int x)
 {
 	return cos_t(x - 512);
 }

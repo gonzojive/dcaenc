@@ -1,9 +1,30 @@
+/* 
+ * This file is part of dcaenc.
+ *
+ * Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>
+ *
+ * dcaenc is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * dcaenc is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with dcaenc; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ */
 #include "unicode_support.h"
 
 #ifdef _WIN32
 
 #include <windows.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <wchar.h>
 
 char *utf16_to_utf8(const wchar_t *input)
 {
@@ -63,7 +84,7 @@ void init_commandline_arguments_utf8(int *argc, char ***argv)
 		exit(-1);
 	}
 
-	*argv = malloc(sizeof(char*) * nArgs);
+	*argv = (char**) malloc(sizeof(char*) * nArgs);
 	*argc = nArgs;
 
 	if(NULL == *argv)
@@ -156,22 +177,24 @@ int rename_utf8(const char *oldname_utf8, const char *newname_utf8)
 
 char *path_utf8_to_ansi(const char *psz_filename_utf8, int b_create)
 {
+	char *short_path = NULL;
+	wchar_t *psz_filename_utf16 = NULL;
+
 	if(!psz_filename_utf8)
 	{
 		return NULL;
 	}
 	
-	char *short_path = NULL;
-	
-	wchar_t *psz_filename_utf16 = utf8_to_utf16(psz_filename_utf8);
+	psz_filename_utf16 = utf8_to_utf16(psz_filename_utf8);
 	if(psz_filename_utf16)
 	{
+		char *psz_filename_ansi = NULL;
 		if(b_create)
 		{
 			FILE *fh = _wfopen(psz_filename_utf16, L"a+");
 			if(fh) fclose(fh);
 		}
-		char *psz_filename_ansi = utf16_to_ansi(psz_filename_utf16);
+		psz_filename_ansi = utf16_to_ansi(psz_filename_utf16);
 		if(psz_filename_ansi)
 		{
 			if(strcmp(psz_filename_ansi, psz_filename_utf8))
