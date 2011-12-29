@@ -26,7 +26,7 @@ libdcaenc_la_LDFLAGS = -version-info 0:0:0 \
 #alsaconf_DATA = dca.conf
 #endif
 
-dcaenc_SOURCES = main.c wavfile.c unicode_support.c dcaenc.h wavfile.h unicode_support.h
+dcaenc_SOURCES = main.c wavfile.c unicode_support.c xgetopt.c dcaenc.h wavfile.h unicode_support.h xgetopt.h
 dcaenc_LDADD = libdcaenc.la
 
 gentables_SOURCES = gentables.c \

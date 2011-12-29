@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef _MSC_VER
 #include "config_msvc.h"
@@ -30,6 +31,8 @@
 #include "dcaenc.h"
 #include "wavfile.h"
 #include "unicode_support.h"
+#include "xgetopt.h"
+#include "compiler_info.h"
 
 extern const int32_t prototype_filter[512];
 static char status[4] = {'|','/','-','\\'};
@@ -51,7 +54,15 @@ static int dcaenc_main(int argc, char *argv[])
 	int wrote;
 	int counter;
 	int status_idx;
-	
+	int show_ver;
+	int show_help;
+	int ignore_len;
+	int enc_flags;
+	xgetopt_t opt;
+	char t;
+	char *file_input;
+	char *file_output;
+
 	static const int channel_map[6] = {DCAENC_CHANNELS_MONO, DCAENC_CHANNELS_STEREO, 0,
 	DCAENC_CHANNELS_2FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR };
 	
@@ -61,47 +72,120 @@ static int dcaenc_main(int argc, char *argv[])
 	fprintf(stderr, "it under the terms of the GNU General Public License <http://www.gnu.org/>.\n");
 	fprintf(stderr, "Note that this program is distributed with ABSOLUTELY NO WARRANTY.\n\n");
 
-	if (argc != 4) {
-	    if (argc == 2 && !strcmp(argv[1], "--version")) {
-	        fprintf(stderr, PACKAGE_NAME "-" PACKAGE_VERSION "\n");
-		fprintf(stderr, PACKAGE_URL "\n");
-		return 0;
-	    } else {
-			fprintf(stderr, "Usage:\n  dcaenc <input.wav> <output.dts> <bitrate_kbps>\n\n");
-	        fprintf(stderr, "Options:\n  - Input or output file name can be \"-\" for stdin/stdout.\n");
-			fprintf(stderr, "  - The bitrate is specified in kilobits per second and may be rounded up.\n");
-			fprintf(stderr, "  - The sample rate must be one of the following values:\n    32000, 44100, 48000 or those divided by 2 or 4.\n");
-	        return 1;
-	    }
+	// ----------------------------
+
+	file_input = NULL;
+	file_output = NULL;
+	bitrate = 0;
+	enc_flags = DCAENC_FLAG_BIGENDIAN;
+	show_ver = 0;
+	ignore_len = 0;
+	show_help = 0;
+
+	memset(&opt, 0, sizeof(xgetopt_t));
+	while((t = xgetopt(argc, argv, "i:o:b:hlev", &opt)) != EOF)
+	{
+		switch(t)
+		{
+		case 'i':
+			file_input = opt.optarg;
+			break;
+		case 'o':
+			file_output = opt.optarg;
+			break;
+		case 'b':
+			bitrate = atoi(opt.optarg) * 1000;
+			if(bitrate > 6144000 || bitrate < 32000)
+			{
+				fprintf(stderr, "Bitrate must be between 32 and 6144 kbps!\n");
+				return 1;
+			}
+			break;
+		case 'h':
+			show_help = 1;
+			break;
+		case 'l':
+			ignore_len = 1;
+			break;
+		case 'e':
+			enc_flags = enc_flags & (~DCAENC_FLAG_BIGENDIAN);
+			break;
+		case 'v':
+			show_ver = 1;
+			break;
+		case '?':
+			fprintf(stderr, "Unknown commandline option or missing argument: %s\n", argv[opt.optind-1]);
+			return 1;
+		}
 	}
-	f = wavfile_open(argv[1], &error_msg);
+	
+	// ----------------------------
+
+	if(!file_input || !file_output || bitrate < 1 || show_ver || show_help)
+	{
+		if(show_ver)
+		{
+			fprintf(stderr, PACKAGE_NAME "-" PACKAGE_VERSION "\n");
+			fprintf(stderr, "Compiled on " __DATE__ " at " __TIME__ " using " __COMPILER__ ".\n");
+			fprintf(stderr, PACKAGE_URL "\n");
+			return 0;
+		}
+		else if(show_help)
+		{
+			fprintf(stderr, "Usage:\n  dcaenc -i <input.wav> -o <output.dts> -b <bitrate_kbps>\n\n");
+			fprintf(stderr, "Optional:\n");
+			fprintf(stderr, "  -l  Ignore input length, can be useful when reading from stdin\n");
+			fprintf(stderr, "  -e  Switch output endianess to Little Endian (default is: Big Endian)\n");
+			fprintf(stderr, "  -h  Print the help screen that your are looking at right now\n");
+			fprintf(stderr, "  -v  Show version info\n\n");
+			fprintf(stderr, "Notes:\n");
+			fprintf(stderr, "  * Input or output file name can be \"-\" for stdin/stdout.\n");
+			fprintf(stderr, "  * The bitrate is specified in kilobits per second and may be rounded up.\n");
+			fprintf(stderr, "  * The sample rate must be one of the following values:\n    32000, 44100, 48000 or those divided by 2 or 4.\n");
+			return 0;
+		}
+		else
+		{
+			fprintf(stderr, "Required arguments are missing. Use '-h' option for help!\n");
+			return 1;
+		}
+	}
+
+	fprintf(stderr, "Source: %s\n", file_input);
+	fprintf(stderr, "Output: %s\n", file_output);
+	fprintf(stderr, "KBit/s: %d\n\n", bitrate / 1000);
+
+	// ----------------------------
+
+	f = wavfile_open(file_input, &error_msg, ignore_len);
 	if (!f) {
-	    fprintf(stderr, "Could not open or parse \"%s\".\n", argv[1]);
+	    fprintf(stderr, "Could not open or parse \"%s\".\n", file_input);
 	    fprintf(stderr, "Error: %s!\n", error_msg);
 	    return 1;
 	}
-	bitrate = atoi(argv[3]) * 1000;
 	
 	samples_total = f->samples_left;
-	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, f->channels == 6 ? DCAENC_FLAG_LFE : 0);
+	
+	if(f->channels == 6)
+		enc_flags = enc_flags & DCAENC_FLAG_LFE;
+
+	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, enc_flags);
 	
 	if (!c) {
 	    fprintf(stderr, "Insufficient bitrate or unsupported sample rate!\n");
 	    return 1;
 	}
-	outfile = strcmp(argv[2], "-") ? fopen_utf8(argv[2], "wb") : stdout;
+	outfile = strcmp(file_output, "-") ? fopen_utf8(file_output, "wb") : stdout;
 	if(!outfile) {
-	    fprintf(stderr, "Could not open \"%s\".\n", argv[2]);
+	    fprintf(stderr, "Could not open \"%s\".\n", file_output);
 	    return 1;
 	}
-	
-	fprintf(stderr, "Source: %s\n", argv[1]);
-	fprintf(stderr, "Output: %s\n", argv[2]);
-	fprintf(stderr, "KBit/s: %d\n\n", bitrate / 1000);
 	
 	fflush(stdout);
 	fflush(stderr);
 	
+	// ----------------------------
+
 	counter = 0;
 	samples_read_total = 0;
 	status_idx = 0;

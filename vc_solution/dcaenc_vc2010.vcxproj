@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\compiler_info.h" />
     <ClInclude Include="..\config_msvc.h" />
     <ClInclude Include="..\dcaenc.h" />
     <ClInclude Include="..\dcaenc_private.h" />
@@ -28,6 +29,7 @@
     <ClInclude Include="..\softfloat.h" />
     <ClInclude Include="..\unicode_support.h" />
     <ClInclude Include="..\wavfile.h" />
+    <ClInclude Include="..\xgetopt.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\alsaplugin.c">
@@ -47,6 +49,7 @@
     <ClCompile Include="..\math_tables_msvc.c" />
     <ClCompile Include="..\unicode_support.c" />
     <ClCompile Include="..\wavfile.c" />
+    <ClCompile Include="..\xgetopt.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F90211C8-0718-46F1-AD58-683FA005BFA5}</ProjectGuid>

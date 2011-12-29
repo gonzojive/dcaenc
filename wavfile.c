@@ -85,7 +85,7 @@ static int find_chunk(FILE * file, const uint8_t chunk_id[4], size_t *chunk_size
 	}
 }
 
-wavfile * wavfile_open(const char * filename, const char ** error_msg)
+wavfile * wavfile_open(const char * filename, const char ** error_msg, const int ignore_len)
 {
 	wavfile *result;
 	size_t s;
@@ -214,13 +214,13 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg)
 		*error_msg = g_error_msg[11];
 		goto err3;
 	}
-	if(((v == 0) || (v % block_align != 0)) && (result->file != stdin))
+	if(((v == 0) || (v % block_align != 0)) && (!ignore_len))
 	{
 		*error_msg = g_error_msg[12];
 		goto err3;
 	}
 
-	result->samples_left = SIZE2UINT32(((v > 0) && (v < UNKNOWN_SIZE)) ? (v / block_align) : UNKNOWN_SIZE);
+	result->samples_left = SIZE2UINT32(ignore_len ? UNKNOWN_SIZE : (v / block_align));
 	free(fmt);
 	*error_msg = g_error_msg[0];
 	return result;
