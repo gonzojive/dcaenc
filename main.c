@@ -167,7 +167,7 @@ static int dcaenc_main(int argc, char *argv[])
 	samples_total = f->samples_left;
 	
 	if(f->channels == 6)
-		enc_flags = enc_flags & DCAENC_FLAG_LFE;
+		enc_flags = enc_flags | DCAENC_FLAG_LFE;
 
 	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, enc_flags);
 	
