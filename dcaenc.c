@@ -36,8 +36,7 @@
 #define INLINE inline
 #endif
 
-dcaenc_context dcaenc_create(int sample_rate, int channel_config,
-							 int approx_bitrate, int flags)
+dcaenc_context dcaenc_create(int sample_rate, int channel_config, int approx_bitrate, int flags)
 {
 	int i, frame_bits, bit_step, fir, useful_bitrate, min_frame_bits;
 	dcaenc_context result;
@@ -459,10 +458,14 @@ static void dcaenc_find_peaks(dcaenc_context c)
 }
 
 static const int snr_fudge = 128;
+static const int USED_1ABITS = 1;
+static const int USED_NABITS = 2;
+static const int USED_26ABITS = 4;
 
-static void init_quantization_noise(dcaenc_context c, int noise)
+static int init_quantization_noise(dcaenc_context c, int noise)
 {
 	int ch, band;
+	int ret = 0;
 	
 	c->consumed_bits = 132 + 493 * c->fullband_channels;
 	if (c->flags & DCAENC_FLAG_LFE)
@@ -478,10 +481,19 @@ static void init_quantization_noise(dcaenc_context c, int noise)
 				- c->band_masking_cb[band]
 				- noise;
 
-			c->abits[band][ch] = (snr_cb >= 1312) ? 26
-				: (snr_cb >= 222) ? (8 + mul32(snr_cb - 222, 69000000))
-				: (snr_cb >= 0) ? (2 + mul32(snr_cb, 106000000))
-				: 1;
+			if (snr_cb >= 1312) {
+				c->abits[band][ch] = 26;
+				ret |= USED_26ABITS;
+			} else if (snr_cb >= 222) {
+				c->abits[band][ch] = 8 + mul32(snr_cb - 222, 69000000);
+				ret |= USED_NABITS;
+			} else if (snr_cb >= 0) {
+				c->abits[band][ch] = 2 + mul32(snr_cb, 106000000);
+				ret |= USED_NABITS;
+			} else {
+				c->abits[band][ch] = 1;
+				ret |= USED_1ABITS;
+			}
 		}
 	}
 
@@ -490,33 +502,30 @@ static void init_quantization_noise(dcaenc_context c, int noise)
 			c->consumed_bits += bit_consumption[c->abits[band][ch]];
 	}
 
+	return ret;
 }
 
 static void dcaenc_assign_bits(dcaenc_context c)
 {
 	/* Find the bounds where the binary search should work */
-	int low, high;
-	int loop_count;
-	int down;
+	int low, high, down, used_abits;
 	init_quantization_noise(c, c->worst_quantization_noise);
 	low = high = c->worst_quantization_noise;
+	used_abits = 0;
 	if (c->consumed_bits > c->frame_bits) {
 		while (c->consumed_bits > c->frame_bits) {
+			assert(("Too low bitrate should have been rejected in dcaenc_create", used_abits != USED_1ABITS));
 			low = high;
 			high += snr_fudge;
-			init_quantization_noise(c, high);
+			used_abits = init_quantization_noise(c, high);
 		}
 	} else {
-		loop_count = 0;
 		while (c->consumed_bits <= c->frame_bits) {
-			if(loop_count++ > 65536) {
-				fprintf(stderr, "\nFIXME: Livelock, dcaenc will abort!\n");
-				fprintf(stderr, "Try again with a lower bitrate.\n");
-				exit(1);
-			}
 			high = low;
+			if (used_abits == USED_26ABITS)
+				goto out; /* The requested bitrate is too high, pad with zeros */
 			low -= snr_fudge;
-			init_quantization_noise(c, low);
+			used_abits = init_quantization_noise(c, low);
 		}
 	}
 
@@ -527,6 +536,7 @@ static void dcaenc_assign_bits(dcaenc_context c)
 			high -= down;
 	}
 	init_quantization_noise(c, high);
+out:
 	c->worst_quantization_noise = high;
 	if (high > c->worst_noise_ever)
 		c->worst_noise_ever = high;
@@ -553,7 +563,6 @@ static void bitstream_put(dcaenc_context c, uint32_t bits, int nbits)
 {
 	int max_bits;
 	assert(bits < (1 << nbits));
-	
 	max_bits = (c->flags & DCAENC_FLAG_28BIT) ? 28 : 32;
 	c->wrote += nbits;
 	bits &= ~(0xffffffff << nbits);
@@ -626,10 +635,8 @@ static int dcaenc_calc_one_scale(int32_t peak_cb, int abits, softfloat *quant)
 	int our_nscale, try_remove;
 	int32_t peak;
 	softfloat our_quant;
-
 	assert(peak_cb <= 0);
 	assert(peak_cb >= -2047);
-
 	peak = cb_to_level[-peak_cb];
 	our_nscale = 127;
 
