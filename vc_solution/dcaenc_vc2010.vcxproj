@@ -21,12 +21,6 @@
   <ItemGroup>
     <ClInclude Include="..\compiler_info.h" />
     <ClInclude Include="..\config_msvc.h" />
-    <ClInclude Include="..\dcaenc.h" />
-    <ClInclude Include="..\dcaenc_private.h" />
-    <ClInclude Include="..\float_data.h" />
-    <ClInclude Include="..\int_data.h" />
-    <ClInclude Include="..\math_tables.h" />
-    <ClInclude Include="..\softfloat.h" />
     <ClInclude Include="..\unicode_support.h" />
     <ClInclude Include="..\wavfile.h" />
     <ClInclude Include="..\xgetopt.h" />
@@ -38,7 +32,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\dcaenc.c" />
     <ClCompile Include="..\gentables.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -46,10 +39,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\main.c" />
-    <ClCompile Include="..\math_tables_msvc.c" />
     <ClCompile Include="..\unicode_support.c" />
     <ClCompile Include="..\wavfile.c" />
     <ClCompile Include="..\xgetopt.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="dcalib_vc2010.vcxproj">
+      <Project>{b4ad2963-8469-4dbd-bd26-fad4fe303f8f}</Project>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{F90211C8-0718-46F1-AD58-683FA005BFA5}</ProjectGuid>

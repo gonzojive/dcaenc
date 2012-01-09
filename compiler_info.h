@@ -21,7 +21,7 @@
 #ifndef COMPILER_INFO_H
 #define COMPILER_INFO_H
 
-#ifndef T
+#ifndef _T
 #define __T(X) #X
 #define _T(X) __T(X)
 #endif

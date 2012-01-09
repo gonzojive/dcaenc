@@ -48,11 +48,23 @@ typedef struct dcaenc_context_s *dcaenc_context;
 #define DCAENC_CHANNELS_4FRONT_4REAR 14
 #define DCAENC_CHANNELS_5FRONT_3REAR 15
 
-dcaenc_context dcaenc_create(int sample_rate, int channel_config, int approx_bitrate, int flags);
-int dcaenc_bitrate(dcaenc_context c);
-int dcaenc_input_size(dcaenc_context c);
-int dcaenc_output_size(dcaenc_context c);
-int dcaenc_convert_s32(dcaenc_context c, const int32_t *input, uint8_t *output);
-int dcaenc_destroy(dcaenc_context c, uint8_t *output);
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+	#if defined(DCADLL_VC2010_EXPORTS)
+		#define MAKE_DLL __declspec(dllexport)
+	#elif defined(DCADLL_VC2010_IMPORTS)
+		#define MAKE_DLL __declspec(dllimport)
+	#else
+		#define MAKE_DLL
+	#endif
+#else
+	#define MAKE_DLL
+#endif
+
+MAKE_DLL dcaenc_context dcaenc_create(int sample_rate, int channel_config, int approx_bitrate, int flags);
+MAKE_DLL int dcaenc_bitrate(dcaenc_context c);
+MAKE_DLL int dcaenc_input_size(dcaenc_context c);
+MAKE_DLL int dcaenc_output_size(dcaenc_context c);
+MAKE_DLL int dcaenc_convert_s32(dcaenc_context c, const int32_t *input, uint8_t *output);
+MAKE_DLL int dcaenc_destroy(dcaenc_context c, uint8_t *output);
 
 #endif
