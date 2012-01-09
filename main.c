@@ -22,11 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef _MSC_VER
-#include "config_msvc.h"
-#else
 #include "config.h"
-#endif
 
 #include "dcaenc.h"
 #include "wavfile.h"

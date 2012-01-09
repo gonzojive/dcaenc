@@ -13,7 +13,7 @@
   <ItemGroup>
     <ClCompile Include="..\dcaenc.c" />
     <ClCompile Include="..\dllmain.cpp" />
-    <ClCompile Include="..\math_tables_msvc.c" />
+    <ClCompile Include="..\math_tables.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\dcaenc.h" />
@@ -75,6 +75,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ImportLibrary>$(TargetDir)$(TargetName)_imp.lib</ImportLibrary>
     </Link>
+    <PreBuildEvent>
+      <Command>copy /Y "$(SolutionDir)..\config_msvc.h" "$(SolutionDir)..\config.h"</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Create: "$(SolutionDir)config.h"</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -107,6 +113,12 @@
       <NoEntryPoint>true</NoEntryPoint>
     </Link>
     <ProjectReference />
+    <PreBuildEvent>
+      <Command>copy /Y "$(SolutionDir)..\config_msvc.h" "$(SolutionDir)..\config.h"</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
+      <Message>Create: "$(SolutionDir)config.h"</Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

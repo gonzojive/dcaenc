@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "config.h"
 #include "dcaenc.h"
 #include "dcaenc_private.h"
 #include "int_data.h"
@@ -29,12 +30,6 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define div_round_up(a, b) (((a) + (b) - 1) / (b))
 #define round_up(a, b) ((((a) + (b) - 1) / (b)) * (b))
-
-#ifdef _MSC_VER
-#define INLINE __forceinline
-#else
-#define INLINE inline
-#endif
 
 dcaenc_context dcaenc_create(int sample_rate, int channel_config, int approx_bitrate, int flags)
 {
@@ -113,19 +108,19 @@ int dcaenc_output_size(dcaenc_context c)
 	return c->frame_bits / ((c->flags & DCAENC_FLAG_28BIT) ? 7 : 8);
 }
 
-INLINE static const int32_t *pcm_sample(dcaenc_context c,
+inline static const int32_t *pcm_sample(dcaenc_context c,
 										const int32_t *container,
 										int sample, int channel)
 {
 	return &container[sample * c->channels + channel];
 }
 
-INLINE static int32_t half32(int32_t a)
+inline static int32_t half32(int32_t a)
 {
 	return (a + 1) >> 1;
 }
 
-INLINE static int32_t mul32(int32_t a, int32_t b)
+inline static int32_t mul32(int32_t a, int32_t b)
 {
 	int64_t r = (int64_t)a * b + 0x80000000ULL;
 	return r >> 32;

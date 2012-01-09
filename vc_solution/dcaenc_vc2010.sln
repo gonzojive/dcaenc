@@ -2,10 +2,21 @@
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dcaenc_vc2010", "dcaenc_vc2010.vcxproj", "{F90211C8-0718-46F1-AD58-683FA005BFA5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866} = {282DDEDF-52A5-442E-90DE-94ABEC4B4866}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dcalib_vc2010", "dcalib_vc2010.vcxproj", "{B4AD2963-8469-4DBD-BD26-FAD4FE303F8F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866} = {282DDEDF-52A5-442E-90DE-94ABEC4B4866}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dcadll_vc2010", "dcadll_vc2010.vcxproj", "{8AFCA1B5-C8F1-4F56-91F7-80415FFEB663}"
+	ProjectSection(ProjectDependencies) = postProject
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866} = {282DDEDF-52A5-442E-90DE-94ABEC4B4866}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gentables", "gentables.vcxproj", "{282DDEDF-52A5-442E-90DE-94ABEC4B4866}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +46,12 @@ Global
 		{8AFCA1B5-C8F1-4F56-91F7-80415FFEB663}.Release|Win32.ActiveCfg = Release|Win32
 		{8AFCA1B5-C8F1-4F56-91F7-80415FFEB663}.Release|Win32.Build.0 = Release|Win32
 		{8AFCA1B5-C8F1-4F56-91F7-80415FFEB663}.Release|x64.ActiveCfg = Release|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Debug|Win32.ActiveCfg = Debug|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Debug|Win32.Build.0 = Debug|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Debug|x64.ActiveCfg = Debug|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Release|Win32.ActiveCfg = Release|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Release|Win32.Build.0 = Release|Win32
+		{282DDEDF-52A5-442E-90DE-94ABEC4B4866}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

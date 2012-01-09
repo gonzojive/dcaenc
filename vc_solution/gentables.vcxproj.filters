@@ -15,33 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\unicode_support.h">
+    <None Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\int_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\wavfile.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\xgetopt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\compiler_info.h">
+    <ClInclude Include="..\float_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\alsaplugin.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\unicode_support.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\wavfile.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\xgetopt.c">
+    <ClCompile Include="..\gentables.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
