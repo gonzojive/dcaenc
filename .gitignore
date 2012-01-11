@@ -35,3 +35,4 @@ vc_solution/x64/
 vc_solution/*.opensdf
 vc_solution/*.sdf
 vc_solution/*.vcxproj.user
+vc_solution/*.suo

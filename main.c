@@ -90,7 +90,7 @@ static int dcaenc_main(int argc, char *argv[])
 			file_output = opt.optarg;
 			break;
 		case 'b':
-			bitrate = atoi(opt.optarg) * 1000;
+			bitrate = (int)(atof(opt.optarg) * 1000.0f);
 			if(bitrate > 6144000 || bitrate < 32000)
 			{
 				fprintf(stderr, "Bitrate must be between 32 and 6144 kbps!\n");
@@ -149,7 +149,7 @@ static int dcaenc_main(int argc, char *argv[])
 
 	fprintf(stderr, "Source: %s\n", file_input);
 	fprintf(stderr, "Output: %s\n", file_output);
-	fprintf(stderr, "KBit/s: %d\n\n", bitrate / 1000);
+	fprintf(stderr, "KBit/s: %d.%03d\n\n", bitrate / 1000, bitrate % 1000);
 
 	// ----------------------------
 
