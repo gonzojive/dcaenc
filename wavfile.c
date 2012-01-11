@@ -69,6 +69,8 @@ static int find_chunk(FILE * file, const uint8_t chunk_id[4], size_t *chunk_size
 			return 1;
 		}
 		
+		if((chunksize % 2) == 1) chunksize++; //Skip extra "unused" byte at the end of odd-size chunks
+
 		if(fseek(file, SIZE2UINT32(chunksize), SEEK_CUR))
 		{
 			while(chunksize > 8)
@@ -149,21 +151,32 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg, const int
 	}
 
 	fmt = (uint8_t*)malloc(s);
-	if (!fmt)
+	if(!fmt)
 	{
 		*error_msg = g_error_msg[5];
 		goto err2;
 	}
 
-	if (fread(fmt, 1, s, result->file) != s)
+	if(fread(fmt, 1, s, result->file) != s)
 	{
 		*error_msg = g_error_msg[5];
 		goto err3;
 	}
 
+	/* skip unused byte (for odd-size chunks) */
+	if((s % 2) == 1)
+	{
+		char dummy[1];
+		if(fread(&dummy, 1, 1,  result->file) != 1)
+		{
+			*error_msg = g_error_msg[5];
+			goto err3;
+		}
+	}
+
 	/* wFormatTag */
 	v = (uint32_t)fmt[0] | ((uint32_t)fmt[1] << 8);
-	if (v != 1 && v != 0xfffe)
+	if(v != 1 && v != 0xfffe)
 	{
 		*error_msg = g_error_msg[6];
 		goto err3;
@@ -171,7 +184,7 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg, const int
 
 	/* wChannels */
 	v = (uint32_t)fmt[2] | ((uint32_t)fmt[3] << 8);
-	if (v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
+	if(v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
 	{
 		*error_msg = g_error_msg[7];
 		goto err3;
@@ -191,19 +204,19 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg, const int
 
 	/* wBitsPerSample */
 	result->bits_per_sample = (uint32_t)fmt[14] | ((uint32_t)fmt[15] << 8);
-	if (result->bits_per_sample != 16 && result->bits_per_sample != 32)
+	if(result->bits_per_sample != 16 && result->bits_per_sample != 32)
 	{
 		*error_msg = g_error_msg[8];
 		goto err3;
 	}
 
-	if (block_align != result->channels * (result->bits_per_sample / 8))
+	if(block_align != result->channels * (result->bits_per_sample / 8))
 	{
 		*error_msg = g_error_msg[9];
 		goto err3;
 	}
 
-	if (avg_bps != block_align * result->sample_rate)
+	if(avg_bps != block_align * result->sample_rate)
 	{
 		*error_msg = g_error_msg[10];
 		goto err3;
