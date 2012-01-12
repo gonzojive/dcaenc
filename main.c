@@ -56,6 +56,7 @@ static int dcaenc_main(int argc, char *argv[])
 	int ignore_len;
 	int enc_flags;
 	int channel_config;
+	int has_lfe;
 	xgetopt_t opt;
 	char t;
 	char *file_input;
@@ -77,12 +78,13 @@ static int dcaenc_main(int argc, char *argv[])
 	bitrate = 0;
 	enc_flags = DCAENC_FLAG_BIGENDIAN;
 	channel_config = AUTO_SELECT;
+	has_lfe = 0;
 	show_ver = 0;
 	ignore_len = 0;
 	show_help = 0;
 
 	memset(&opt, 0, sizeof(xgetopt_t));
-	while((t = xgetopt(argc, argv, "i:o:b:c:hlev", &opt)) != EOF)
+	while((t = xgetopt(argc, argv, "i:o:b:c:fhlev", &opt)) != EOF)
 	{
 		switch(t)
 		{
@@ -107,6 +109,9 @@ static int dcaenc_main(int argc, char *argv[])
 				fprintf(stderr, "Bad channel configuration. Must be between 1 and 16!\n");
 				return 1;
 			}
+			break;
+		case 'f':
+			has_lfe = 1;
 			break;
 		case 'h':
 			show_help = 1;
@@ -145,6 +150,7 @@ static int dcaenc_main(int argc, char *argv[])
 			fprintf(stderr, "  -e  Switch output endianess to Little Endian (default is: Big Endian)\n");
 			fprintf(stderr, "  -h  Print the help screen that your are looking at right now\n");
 			fprintf(stderr, "  -c  Overwrite the channel configuration (default is: Auto Selection)\n");
+			fprintf(stderr, "  -f  Add an additional LFE channel (default: used for 6ch input)\n");
 			fprintf(stderr, "  -v  Show version info\n\n");
 			fprintf(stderr, "Remarks:\n");
 			fprintf(stderr, "  * Input or output file name can be \"-\" for stdin/stdout.\n");
@@ -220,14 +226,17 @@ static int dcaenc_main(int argc, char *argv[])
 	}
 	
 	samples_total = f->samples_left;
-	
-	if(f->channels == 6)
-		enc_flags = enc_flags | DCAENC_FLAG_LFE;
 
 	if(channel_config == AUTO_SELECT)
 		channel_config = channel_map[f->channels - 1];
 
-	switch(f->channels)
+	if(has_lfe || ((f->channels == 6) && (channel_config == DCAENC_CHANNELS_3FRONT_2REAR)))
+	{
+		enc_flags = enc_flags | DCAENC_FLAG_LFE;
+		has_lfe = 1;
+	}
+
+	switch(f->channels - (has_lfe ? 1 : 0))
 	{
 	case 1:
 		if(!(channel_config == DCAENC_CHANNELS_MONO))
@@ -251,13 +260,14 @@ static int dcaenc_main(int argc, char *argv[])
 			return 1;
 		}
 	case 5:
-		if(!(channel_config == DCAENC_CHANNELS_3FRONT_2REAR || channel_config == DCAENC_CHANNELS_3FRONT_2REAR_1OV))
+		if(!(channel_config == DCAENC_CHANNELS_3FRONT_2REAR))
 		{
 			fprintf(stderr, "Invalid channel configuration for input audio!\n");
 			return 1;
 		}
 	case 6:
-		if(!(channel_config == DCAENC_CHANNELS_3FRONT_3REAR || channel_config == DCAENC_CHANNELS_4FRONT_2REAR))
+		if(!(channel_config == DCAENC_CHANNELS_3FRONT_3REAR || channel_config == DCAENC_CHANNELS_4FRONT_2REAR ||
+			 channel_config == DCAENC_CHANNELS_3FRONT_2REAR_1OV))
 		{
 			fprintf(stderr, "Invalid channel configuration for input audio!\n");
 			return 1;
