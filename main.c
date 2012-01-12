@@ -32,6 +32,7 @@
 
 extern const int32_t prototype_filter[512];
 static char status[4] = {'|','/','-','\\'};
+static const int AUTO_SELECT = -1;
 
 static int dcaenc_main(int argc, char *argv[])
 {
@@ -54,6 +55,7 @@ static int dcaenc_main(int argc, char *argv[])
 	int show_help;
 	int ignore_len;
 	int enc_flags;
+	int channel_config;
 	xgetopt_t opt;
 	char t;
 	char *file_input;
@@ -74,12 +76,13 @@ static int dcaenc_main(int argc, char *argv[])
 	file_output = NULL;
 	bitrate = 0;
 	enc_flags = DCAENC_FLAG_BIGENDIAN;
+	channel_config = AUTO_SELECT;
 	show_ver = 0;
 	ignore_len = 0;
 	show_help = 0;
 
 	memset(&opt, 0, sizeof(xgetopt_t));
-	while((t = xgetopt(argc, argv, "i:o:b:hlev", &opt)) != EOF)
+	while((t = xgetopt(argc, argv, "i:o:b:c:hlev", &opt)) != EOF)
 	{
 		switch(t)
 		{
@@ -94,6 +97,14 @@ static int dcaenc_main(int argc, char *argv[])
 			if(bitrate > 6144000 || bitrate < 32000)
 			{
 				fprintf(stderr, "Bitrate must be between 32 and 6144 kbps!\n");
+				return 1;
+			}
+			break;
+		case 'c':
+			channel_config = atoi(opt.optarg) - 1;
+			if((channel_config < 0) || (channel_config > 15))
+			{
+				fprintf(stderr, "Bad channel configuration. Must be between 1 and 16!\n");
 				return 1;
 			}
 			break;
@@ -133,11 +144,59 @@ static int dcaenc_main(int argc, char *argv[])
 			fprintf(stderr, "  -l  Ignore input length, can be useful when reading from stdin\n");
 			fprintf(stderr, "  -e  Switch output endianess to Little Endian (default is: Big Endian)\n");
 			fprintf(stderr, "  -h  Print the help screen that your are looking at right now\n");
+			fprintf(stderr, "  -c  Overwrite the channel configuration (default is: Auto Selection)\n");
 			fprintf(stderr, "  -v  Show version info\n\n");
-			fprintf(stderr, "Notes:\n");
+			fprintf(stderr, "Remarks:\n");
 			fprintf(stderr, "  * Input or output file name can be \"-\" for stdin/stdout.\n");
 			fprintf(stderr, "  * The bitrate is specified in kilobits per second and may be rounded up.\n");
-			fprintf(stderr, "  * The sample rate must be one of the following values:\n    32000, 44100, 48000 or those divided by 2 or 4.\n");
+			fprintf(stderr, "      - Use Float value for bitrates that are not a multiple of 1 kbps.\n");
+			fprintf(stderr, "  * Supported input sample rates:\n");
+			fprintf(stderr, "      - 32000\n");
+			fprintf(stderr, "      - 44100\n");
+			fprintf(stderr, "      - 48000\n");
+			fprintf(stderr, "      - or those divided by 2 or 4\n");
+			fprintf(stderr, "  * Supported channel modes:\n");
+			fprintf(stderr, "      -  1: MONO\n");
+			fprintf(stderr, "      -  2: DUAL_MONO\n");
+			fprintf(stderr, "      -  3: STEREO\n");
+			fprintf(stderr, "      -  4: STEREO_SUMDIFF\n");
+			fprintf(stderr, "      -  5: STEREO_TOTAL\n");
+			fprintf(stderr, "      -  6: 3FRONT\n");
+			fprintf(stderr, "      -  7: 2FRONT_1REAR\n");
+			fprintf(stderr, "      -  8: 3FRONT_1REAR\n");
+			fprintf(stderr, "      -  9: 2FRONT_2REAR\n");
+			fprintf(stderr, "      - 10: 3FRONT_2REAR\n");
+			fprintf(stderr, "      - 11: 4FRONT_2REAR\n");
+			fprintf(stderr, "      - 12: 3FRONT_2REAR_1OV\n");
+			fprintf(stderr, "      - 13: 3FRONT_3REAR\n");
+			fprintf(stderr, "      - 14: 5FRONT_2REAR\n");
+			fprintf(stderr, "      - 15: 4FRONT_4REAR\n");
+			fprintf(stderr, "      - 16: 5FRONT_3REAR\n");
+			fprintf(stderr, "  * Supported bitrates:\n");
+			fprintf(stderr, "      - mono @ 8 kHz:        32-2048 kbps\n");
+			fprintf(stderr, "      - mono @ 12 kHz:       48-3072 kbps\n");
+			fprintf(stderr, "      - mono @ 16 kHz:       48-3842 kbps\n");
+			fprintf(stderr, "      - mono @ 22.05 kHz:    65-3842 kbps\n");
+			fprintf(stderr, "      - mono @ 24 kHz:       71-3842 kbps\n");
+			fprintf(stderr, "      - mono @ 32 kHz:       95-3842 kbps\n");
+			fprintf(stderr, "      - mono @ 44.1 kHz:    130-3842 kbps\n");
+			fprintf(stderr, "      - mono @ 48 kHz:      142-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 8 kHz:      96-2048 kbps\n");
+			fprintf(stderr, "      - stereo @ 12 kHz:     96-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 16 kHz:     96-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 22.05 kHz: 128-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 24 kHz:    192-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 32 kHz:    192-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 44.1 kHz:  256-3842 kbps\n");
+			fprintf(stderr, "      - stereo @ 48 kHz:    271-3842 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 8 kHz:        112-2048 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 12 kHz:       168-3072 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 16 kHz:       224-3842 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 22.05 kHz:    308-3842 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 32 kHz:       447-3842 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 44.1 kHz:     615-3842 kbps\n");
+			fprintf(stderr, "      - 5.1 @ 48 kHz:       670-3842 kbps\n");
+
 			return 0;
 		}
 		else
@@ -165,16 +224,19 @@ static int dcaenc_main(int argc, char *argv[])
 	if(f->channels == 6)
 		enc_flags = enc_flags | DCAENC_FLAG_LFE;
 
-	c = dcaenc_create(f->sample_rate, channel_map[f->channels - 1], bitrate, enc_flags);
+	if(channel_config == AUTO_SELECT)
+		channel_config = channel_map[f->channels - 1];
+
+	c = dcaenc_create(f->sample_rate, channel_config, bitrate, enc_flags);
 	
 	if (!c) {
-	    fprintf(stderr, "Insufficient bitrate or unsupported sample rate!\n");
-	    return 1;
+		fprintf(stderr, "Insufficient bitrate, unsupported sample rate or bad channel mode!\n");
+		return 1;
 	}
 	outfile = strcmp(file_output, "-") ? fopen_utf8(file_output, "wb") : stdout;
 	if(!outfile) {
-	    fprintf(stderr, "Could not open \"%s\".\n", file_output);
-	    return 1;
+		fprintf(stderr, "Could not open \"%s\" for writing!\n", file_output);
+		return 1;
 	}
 	
 	fflush(stdout);
