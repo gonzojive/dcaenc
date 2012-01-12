@@ -227,10 +227,50 @@ static int dcaenc_main(int argc, char *argv[])
 	if(channel_config == AUTO_SELECT)
 		channel_config = channel_map[f->channels - 1];
 
+	switch(f->channels)
+	{
+	case 1:
+		if(!(channel_config == DCAENC_CHANNELS_MONO))
+		{
+			fprintf(stderr, "Invalid channel configuration for input audio!\n");
+			return 1;
+		}
+		break;
+	case 2:
+		if(!(channel_config == DCAENC_CHANNELS_DUAL_MONO || channel_config == DCAENC_CHANNELS_STEREO ||
+			channel_config == DCAENC_CHANNELS_STEREO_SUMDIFF || channel_config == DCAENC_CHANNELS_STEREO_TOTAL))
+		{
+			fprintf(stderr, "Invalid channel configuration for input audio!\n");
+			return 1;
+		}
+		break;
+	case 4:
+		if(!(channel_config == DCAENC_CHANNELS_3FRONT_1REAR || channel_config == DCAENC_CHANNELS_2FRONT_2REAR))
+		{
+			fprintf(stderr, "Invalid channel configuration for input audio!\n");
+			return 1;
+		}
+	case 5:
+		if(!(channel_config == DCAENC_CHANNELS_3FRONT_2REAR || channel_config == DCAENC_CHANNELS_3FRONT_2REAR_1OV))
+		{
+			fprintf(stderr, "Invalid channel configuration for input audio!\n");
+			return 1;
+		}
+	case 6:
+		if(!(channel_config == DCAENC_CHANNELS_3FRONT_3REAR || channel_config == DCAENC_CHANNELS_4FRONT_2REAR))
+		{
+			fprintf(stderr, "Invalid channel configuration for input audio!\n");
+			return 1;
+		}
+		break;
+	}
+
+	// ----------------------------
+
 	c = dcaenc_create(f->sample_rate, channel_config, bitrate, enc_flags);
 	
 	if (!c) {
-		fprintf(stderr, "Insufficient bitrate, unsupported sample rate or bad channel mode!\n");
+		fprintf(stderr, "Insufficient bitrate or unsupported sample rate!\n");
 		return 1;
 	}
 	outfile = strcmp(file_output, "-") ? fopen_utf8(file_output, "wb") : stdout;
