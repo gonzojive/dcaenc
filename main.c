@@ -220,20 +220,22 @@ static int dcaenc_main(int argc, char *argv[])
 
 	f = wavfile_open(file_input, &error_msg, ignore_len);
 	if (!f) {
-	    fprintf(stderr, "Could not open or parse \"%s\".\n", file_input);
-	    fprintf(stderr, "Error: %s!\n", error_msg);
-	    return 1;
+		fprintf(stderr, "Could not open or parse \"%s\".\n", file_input);
+		fprintf(stderr, "Error: %s!\n", error_msg);
+		return 1;
 	}
 	
 	samples_total = f->samples_left;
 
 	if(channel_config == AUTO_SELECT)
+	{
 		channel_config = channel_map[f->channels - 1];
+		if(f->channels == 6) has_lfe = 1;
+	}
 
-	if(has_lfe || ((f->channels == 6) && (channel_config == DCAENC_CHANNELS_3FRONT_2REAR)))
+	if(has_lfe)
 	{
 		enc_flags = enc_flags | DCAENC_FLAG_LFE;
-		has_lfe = 1;
 	}
 
 	switch(f->channels - (has_lfe ? 1 : 0))
@@ -259,12 +261,14 @@ static int dcaenc_main(int argc, char *argv[])
 			fprintf(stderr, "Invalid channel configuration for input audio!\n");
 			return 1;
 		}
+		break;
 	case 5:
 		if(!(channel_config == DCAENC_CHANNELS_3FRONT_2REAR))
 		{
 			fprintf(stderr, "Invalid channel configuration for input audio!\n");
 			return 1;
 		}
+		break;
 	case 6:
 		if(!(channel_config == DCAENC_CHANNELS_3FRONT_3REAR || channel_config == DCAENC_CHANNELS_4FRONT_2REAR ||
 			 channel_config == DCAENC_CHANNELS_3FRONT_2REAR_1OV))
