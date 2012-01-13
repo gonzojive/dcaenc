@@ -33,6 +33,9 @@
 #define SIZE2INT(X) (X)
 #endif
 
+#define BUFFSIZE_SAMPLES 512
+#define BUFFSIZE_BYTES (BUFFSIZE_SAMPLES * 6 * 4)
+
 static const char *g_error_msg[13] =
 {
 	/* 0*/ "Success",
@@ -42,7 +45,7 @@ static const char *g_error_msg[13] =
 	/* 4*/ "Format chunk not found",
 	/* 5*/ "Failed to read Format chunk",
 	/* 6*/ "Invalid or unsupported format tag",
-	/* 7*/ "Unsupported number of channels (only 1, 2, 4, 5 and 6)",
+	/* 7*/ "Unsupported number of channels (only 1, 2, 3, 4, 5 and 6)",
 	/* 8*/ "Unsupported bits per sample (only 16 and 32 for now)",
 	/* 9*/ "Inconsistent block alignment",
 	/*10*/ "Inconsistent average bitrate",
@@ -184,7 +187,7 @@ wavfile * wavfile_open(const char * filename, const char ** error_msg, const int
 
 	/* wChannels */
 	v = (uint32_t)fmt[2] | ((uint32_t)fmt[3] << 8);
-	if(v != 1 && v != 2 && v != 4 && v != 5 && v !=6)
+	if((v < 1) || (v > 6))
 	{
 		*error_msg = g_error_msg[7];
 		goto err3;
@@ -277,22 +280,28 @@ static int32_t get_s32_sample(const wavfile * f, const uint8_t *buffer, int samp
 	}
 }
 
-int wavfile_read_s32(wavfile * f, int32_t *samples)
+int wavfile_read_s32(wavfile * f, int32_t *samples, size_t sample_count)
 {
-	uint8_t buffer[512 * 6 * 4];
+	uint8_t buffer[BUFFSIZE_BYTES];
 	int32_t smpte_sample[6];
 	int samples_to_read;
 	int bytes_to_read;
 	int bytes_read;
 	unsigned int i, ch;
 	
+	if(sample_count != BUFFSIZE_SAMPLES)
+	{
+		fprintf(stderr, "Only 512 samples currently supported!\n");
+		return 0;
+	}
+
 	if(f->samples_left < 1)
 	{
 		return 0;
 	}
 	
-	memset(buffer, 0, 512 * 6 * 4);
-	samples_to_read = (f->samples_left < 512) ? f->samples_left : 512;
+	memset(buffer, 0, BUFFSIZE_BYTES);
+	samples_to_read = (f->samples_left < BUFFSIZE_SAMPLES) ? f->samples_left : BUFFSIZE_SAMPLES;
 	bytes_to_read = samples_to_read * f->channels * (f->bits_per_sample / 8);
 	if(f->samples_left != UNKNOWN_SIZE) {
 		f->samples_left -= samples_to_read;
@@ -303,7 +312,7 @@ int wavfile_read_s32(wavfile * f, int32_t *samples)
 		f->samples_left = 0;
 	}
 	
-	for (i = 0; i < 512; i++)
+	for (i = 0; i < BUFFSIZE_SAMPLES; i++)
 	{
 		for (ch = 0; ch < f->channels; ch++)
 			smpte_sample[ch] = get_s32_sample(f, buffer, i, ch);
@@ -314,6 +323,11 @@ int wavfile_read_s32(wavfile * f, int32_t *samples)
 		case 4:
 			for (ch = 0; ch < f->channels; ch++)
 				*(samples++) = smpte_sample[ch];
+			break;
+		case 3:
+			*(samples++) = smpte_sample[2];
+			*(samples++) = smpte_sample[0];
+			*(samples++) = smpte_sample[1];
 			break;
 		case 5:
 			*(samples++) = smpte_sample[2];
@@ -330,6 +344,9 @@ int wavfile_read_s32(wavfile * f, int32_t *samples)
 			*(samples++) = smpte_sample[5];
 			*(samples++) = smpte_sample[3];
 			break;
+		default:
+			fprintf(stderr, "FIXME: Unexpected channel number!\n");
+			exit(1);
 		}
 	}
 	

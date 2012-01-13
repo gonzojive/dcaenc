@@ -30,15 +30,20 @@
 #include "xgetopt.h"
 #include "compiler_info.h"
 
-extern const int32_t prototype_filter[512];
+//extern const int32_t prototype_filter[512];
+
 static char status[4] = {'|','/','-','\\'};
 static const int AUTO_SELECT = -1;
+
+#define BUFFSIZE_SPL 512
+#define BUFFSIZE_CHN 6
+#define BUFFSIZE_OUT 16384
 
 static int dcaenc_main(int argc, char *argv[])
 {
 	dcaenc_context c;
-	int32_t data[512 * 6];
-	uint8_t output[16384];
+	int32_t data[BUFFSIZE_SPL * BUFFSIZE_CHN];
+	uint8_t output[BUFFSIZE_OUT];
 	wavfile * f;
 	FILE * outfile;
 	const char *error_msg;
@@ -62,8 +67,8 @@ static int dcaenc_main(int argc, char *argv[])
 	char *file_input;
 	char *file_output;
 
-	static const int channel_map[6] = {DCAENC_CHANNELS_MONO, DCAENC_CHANNELS_STEREO, 0,
-	DCAENC_CHANNELS_2FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR };
+	static const int channel_map[6] = {DCAENC_CHANNELS_MONO, DCAENC_CHANNELS_STEREO, DCAENC_CHANNELS_3FRONT,
+		DCAENC_CHANNELS_2FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR};
 	
 	fprintf(stderr, "%s-%s [%s]\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
 	fprintf(stderr, "Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
@@ -287,6 +292,13 @@ static int dcaenc_main(int argc, char *argv[])
 		fprintf(stderr, "Insufficient bitrate or unsupported sample rate!\n");
 		return 1;
 	}
+	
+	if((((size_t)(dcaenc_output_size(c))) > BUFFSIZE_OUT) || (((size_t)(dcaenc_input_size(c))) > BUFFSIZE_SPL))
+	{
+		fprintf(stderr, "Internal error, buffers are too small!\n", file_output);
+		return 1;
+	}
+	
 	outfile = strcmp(file_output, "-") ? fopen_utf8(file_output, "wb") : stdout;
 	if(!outfile) {
 		fprintf(stderr, "Could not open \"%s\" for writing!\n", file_output);
@@ -302,7 +314,7 @@ static int dcaenc_main(int argc, char *argv[])
 	samples_read_total = 0;
 	status_idx = 0;
 	
-	while(samples_read = wavfile_read_s32(f, data))
+	while(samples_read = wavfile_read_s32(f, data, BUFFSIZE_SPL))
 	{
 		samples_read_total += samples_read;
 		wrote = dcaenc_convert_s32(c, data, output);

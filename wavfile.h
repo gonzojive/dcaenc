@@ -34,7 +34,7 @@ typedef struct {
 } wavfile;
 
 wavfile * wavfile_open(const char * filename, const char ** error_msg, const int ignore_len);
-int wavfile_read_s32(wavfile * f, int32_t * samples);
+int wavfile_read_s32(wavfile * f, int32_t *samples, size_t sample_count);
 void wavfile_close(wavfile * f);
 
 #endif
