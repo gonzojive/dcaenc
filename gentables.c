@@ -1,7 +1,7 @@
 /* 
  * This file is part of dcaenc.
  *
- * Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>
+ * Copyright (c) 2008-2012 Alexander E. Patrakov <patrakov@gmail.com>
  *
  * dcaenc is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,6 +24,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdint.h>
+#include "config.h"
 #include "int_data.h"
 #include "float_data.h"
 
@@ -218,6 +219,7 @@ void print_subband_fir(void)
 int main(int argc, char *argv[])
 {
 	printf("/* GENERATED FILE, DO NOT EDIT */\n\n");
+	printf("#include \"config.h\"\n");
 	printf("#include \"math_tables.h\"\n\n");
 	print_lfe_fir();
 	print_subband_fir();

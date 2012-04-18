@@ -1,7 +1,7 @@
 /* 
  * This file is part of dcaenc.
  *
- * Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>
+ * Copyright (c) 2008-2012 Alexander E. Patrakov <patrakov@gmail.com>
  *
  * dcaenc is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -71,7 +71,7 @@ static int dcaenc_main(int argc, char *argv[])
 		DCAENC_CHANNELS_2FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR, DCAENC_CHANNELS_3FRONT_2REAR};
 	
 	fprintf(stderr, "%s-%s [%s]\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__);
-	fprintf(stderr, "Copyright (c) 2008-2011 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
+	fprintf(stderr, "Copyright (c) 2008-2012 Alexander E. Patrakov <patrakov@gmail.com>\n\n");
 	fprintf(stderr, "This program is free software: you can redistribute it and/or modify\n");
 	fprintf(stderr, "it under the terms of the GNU General Public License <http://www.gnu.org/>.\n");
 	fprintf(stderr, "Note that this program is distributed with ABSOLUTELY NO WARRANTY.\n\n");
