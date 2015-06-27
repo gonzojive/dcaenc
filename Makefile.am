@@ -14,17 +14,17 @@ nodist_libdcaenc_la_SOURCES = math_tables.c
 libdcaenc_la_LDFLAGS = -version-info 0:0:0 \
     -export-symbols $(top_srcdir)/dcaenc.sym
 
-#if HAVE_ALSA
-#plugin_LTLIBRARIES = libasound_module_pcm_dca.la
-#plugindir = $(libdir)/alsa-lib
-#
-#libasound_module_pcm_dca_la_SOURCES = alsaplugin.c dcaenc.h
-#libasound_module_pcm_dca_la_LIBADD = libdcaenc.la @ALSA_LIBS@
-#libasound_module_pcm_dca_la_LDFLAGS = -no-undefined -avoid-version
-#
-#alsaconfdir = $(datadir)/alsa/pcm
-#alsaconf_DATA = dca.conf
-#endif
+if HAVE_ALSA
+plugin_LTLIBRARIES = libasound_module_pcm_dca.la
+plugindir = $(libdir)/alsa-lib
+
+libasound_module_pcm_dca_la_SOURCES = alsaplugin.c dcaenc.h
+libasound_module_pcm_dca_la_LIBADD = libdcaenc.la @ALSA_LIBS@
+libasound_module_pcm_dca_la_LDFLAGS = -no-undefined -avoid-version
+
+alsaconfdir = $(datadir)/alsa/pcm
+alsaconf_DATA = dca.conf
+endif
 
 dcaenc_SOURCES = main.c wavfile.c unicode_support.c xgetopt.c dcaenc.h wavfile.h unicode_support.h xgetopt.h
 dcaenc_LDADD = libdcaenc.la
